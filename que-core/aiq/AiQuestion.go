@@ -63,6 +63,8 @@ func AggregationAIApi(url,
 		return SiliconFlowReplyApi(model, apiKey, aiChatMessages, 7, nil)
 	case ctype.Other:
 		return OtherChatReplyApi(url, model, apiKey, aiChatMessages, 7, nil)
+	case ctype.Custom:
+		return OtherChatReplyApi(url, model, apiKey, aiChatMessages, 7, nil)
 	default:
 		return "", errors.New("AI Type: " + string(aiType))
 	}

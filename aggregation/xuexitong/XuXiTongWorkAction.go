@@ -273,7 +273,30 @@ func (question *XXTWorkQuestion) WriteQuestionForAIAction(cache *xuexitong.XueXi
 		//fmt.Println("AI回复解析错误，已采用随机答案:", err, fmt.Sprintf("题目：%v \nAI回复： %v", aiChatMessages, aiAnswer))
 		log2.Print(log2.INFO, "AI回复解析错误，已采用随机答案:", err.Error(), fmt.Sprintf("题目：%v \nAI回复： %v", aiChatMessages, aiAnswer))
 	}
-	question.Question.Answers = answers
+
+	// 根据题型选择正确的答案字段
+	if question.QuestionTypeCode == "6" || question.TypeName == "论述题" {
+		// 论述题需要设置 OpFromAnswer["论述"]
+		if question.EssayQue.OpFromAnswer == nil {
+			question.EssayQue.OpFromAnswer = make(map[string][]string)
+		}
+		question.EssayQue.OpFromAnswer["论述"] = answers
+	} else if question.QuestionTypeCode == "4" || question.TypeName == "简答题" {
+		// 简答题需要设置 OpFromAnswer["简答"]
+		if question.ShortQue.OpFromAnswer == nil {
+			question.ShortQue.OpFromAnswer = make(map[string][]string)
+		}
+		question.ShortQue.OpFromAnswer["简答"] = answers
+	} else if question.QuestionTypeCode == "5" || question.TypeName == "名词解释" {
+		// 名词解释需要设置 OpFromAnswer["名词解释"]
+		if question.TermExplanationQue.OpFromAnswer == nil {
+			question.TermExplanationQue.OpFromAnswer = make(map[string][]string)
+		}
+		question.TermExplanationQue.OpFromAnswer["名词解释"] = answers
+	} else {
+		// 选择、判断、填空等标准题型使用 Answers 字段
+		question.Question.Answers = answers
+	}
 	return nil
 }
 

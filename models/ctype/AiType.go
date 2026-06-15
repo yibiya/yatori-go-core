@@ -12,4 +12,5 @@ const (
 	MetaAi   AiType = "METAAI"
 	Silicon  AiType = "SILICON"
 	Other    AiType = "OTHER"
+	Custom   AiType = "CUSTOM"
 )
