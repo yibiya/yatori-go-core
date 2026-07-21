@@ -22,9 +22,7 @@ func (cache *XueXiTUserCache) CourseListApi(retry int, lastErr error) (string, e
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -69,9 +67,7 @@ func (cache *XueXiTUserCache) CourseCompleteStatusApi(courseListData string, ret
 	//urlStr := "https://mooc2-ans.chaoxing.com/mooc2-ans/mycourse/stu-job-info?clazzPersonStr=134350229_407555221%252C125743273_407555221%252C127063689_407555221%252C126701067_407555221%252C125755386_407555221%252C125888882_407555221%252C125783661_454194591%252C124859308_454194591%252C124554421_454194591%252C116272688_407555221%252C117108284_407555221%252C117784832_407555221%252C116370785_407555221%252C116370660_407555221%252C117687599_407555221"
 	method := "GET"
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 	client := &http.Client{
 		Transport: tr,

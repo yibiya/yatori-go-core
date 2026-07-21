@@ -62,9 +62,7 @@ func (cache *XueXiTUserCache) PullExamListHtmlApi(courseId string, classId strin
 	}
 	urlStr := "https://mooc1-api.chaoxing.com/mooc-ans/exam/phone/task-list?courseId=" + courseId + "&classId=" + classId + "&cpi=" + cpi
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 	client := &http.Client{
 		Transport: tr,
@@ -131,9 +129,7 @@ func (cache *XueXiTUserCache) PullExamEnterInformHtmlApi(
 	var finalURL string // ⭐ 用于保存最终的有效 URL
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 	client := &http.Client{
 		Transport: tr,
@@ -220,9 +216,7 @@ func (cache *XueXiTUserCache) PullExamPaperHtmlApi(courseId, classId, examId, so
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 	client := &http.Client{
 		Transport: tr,
@@ -272,9 +266,7 @@ func (cache *XueXiTUserCache) PullExamListHtmlTwoApi(urlStr string, retry int, l
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 	client := &http.Client{
 		Transport: tr,
@@ -320,9 +312,7 @@ func (cache *XueXiTUserCache) PullReDoExamPaperHtmlApi(urlStr string, retry int,
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 	client := &http.Client{
 		Transport: tr,
@@ -373,9 +363,7 @@ func (cache *XueXiTUserCache) StartReExamApi(examId, examAnswerId, courseId, cla
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -437,9 +425,7 @@ func (cache *XueXiTUserCache) PullReExamPaperHtmlApi(urlStr string) (string, err
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 	client := &http.Client{
 		Transport: tr,
@@ -487,9 +473,7 @@ func (cache *XueXiTUserCache) PullExamQuestionApi(courseId, classId, tId, id, cp
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -626,9 +610,7 @@ func (cache *XueXiTUserCache) SubmitExamAnswerApi(question *XXTExamQuestionSubmi
 	payload := strings.NewReader(values.Encode())
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理

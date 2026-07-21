@@ -31,9 +31,7 @@ func (cache *XueXiTUserCache) XueXiTVerificationCodeApi(retry int, lastErr error
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 	//如果开启了IP代理，那么就直接添加代理
 	if cache.IpProxySW {
@@ -85,9 +83,7 @@ func (cache *XueXiTUserCache) XueXiTChapterVerificationCodeApi(retry int, lastEr
 		fmt.Sprintf("%d", time.Now().UnixMilli())
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	// 代理
@@ -149,9 +145,7 @@ func (cache *XueXiTUserCache) XueXiTPassVerificationCode(code string, retry int,
 	}
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 	//如果开启了IP代理，那么就直接添加代理
 	if cache.IpProxySW {
@@ -222,9 +216,7 @@ func (cache *XueXiTUserCache) XueXiTPassCahpterVerificationCode(code string, ret
 	}
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 	//如果开启了IP代理，那么就直接添加代理
 	if cache.IpProxySW {
@@ -282,9 +274,7 @@ func (cache *XueXiTUserCache) XueXiTSliderVerificationCodeApi(captchaId string, 
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -347,9 +337,7 @@ func (cache *XueXiTUserCache) XueXiTSliderVerificationImgApi(captchaId, serverTi
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -401,12 +389,13 @@ func (cache *XueXiTUserCache) PullSliderImgApi(imgUrl string, retry int, lastErr
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 	client := &http.Client{
 		Transport: tr,
+		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+			return fmt.Errorf("滑块图片请求不允许重定向")
+		},
 	}
 	req, err := http.NewRequest(method, imgUrl, nil)
 
@@ -417,9 +406,6 @@ func (cache *XueXiTUserCache) PullSliderImgApi(imgUrl string, retry int, lastErr
 	req.Header.Add("User-Agent", GetUA("mobile"))
 	req.Header.Add("Accept-Language", "zh-CN,en-US;q=0.9")
 	req.Header.Add("X-Requested-With", "com.chaoxing.mobile")
-	for _, cookie := range cache.cookies {
-		req.AddCookie(cookie)
-	}
 	req.Header.Add("Accept", "*/*")
 	req.Header.Add("Host", "captcha.chaoxing.com")
 	req.Header.Add("Connection", "keep-alive")
@@ -451,9 +437,7 @@ func (cache *XueXiTUserCache) PassSliderApi(captchaId, token, xPoint, runEnv str
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 	client := &http.Client{
 		Transport: tr,

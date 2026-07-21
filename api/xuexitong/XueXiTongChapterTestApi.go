@@ -242,9 +242,7 @@ func (cache *XueXiTUserCache) WorkNewSubmitAnswer(courseId string, classId strin
 
 	// 发送请求
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理

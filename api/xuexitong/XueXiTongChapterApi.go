@@ -31,9 +31,7 @@ func (cache *XueXiTUserCache) PullChapter(cpi int, key int, retry int, lastErr e
 	params.Add("view", "json")
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -104,9 +102,7 @@ func (cache *XueXiTUserCache) FetchChapterPointStatus(nodes []int, clazzID, user
 	payload := strings.NewReader(values.Encode())
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -170,9 +166,7 @@ func (cache *XueXiTUserCache) FetchChapterCords(nodes []int, index, courseId int
 	values.Add("_time", strconv.FormatInt(time.Now().UnixNano()/1000000, 10))
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -236,9 +230,7 @@ func (cache *XueXiTUserCache) FetchChapterCords2(clazzid, courseid, knowledgeid,
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -303,9 +295,7 @@ func (cache *XueXiTUserCache) EnterChapterForwardCallApi(courseId, clazzid, chap
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理

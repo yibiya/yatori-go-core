@@ -32,9 +32,7 @@ func (cache *XueXiTUserCache) GetFaceUpLoadToken() (string, error) {
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -96,9 +94,7 @@ func (cache *XueXiTUserCache) GetHistoryFaceImg(puid string) (string, image.Imag
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -212,9 +208,7 @@ func (cache *XueXiTUserCache) UploadFaceImageApi(token string, image image.Image
 	writer.Close()
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -290,9 +284,7 @@ func (cache *XueXiTUserCache) GetFaceQrCodeApi1(courseId, clazzid, chapterId, cp
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -355,9 +347,7 @@ func (cache *XueXiTUserCache) GetFaceQrCodeApi2(courseId, clazzId, cpi string) (
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -426,9 +416,7 @@ func (cache *XueXiTUserCache) GetFaceQrCodeApi3(courseId, clazzid, chapterId, cp
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -497,9 +485,7 @@ func (cache *XueXiTUserCache) GetFaceQrCodeApi3(courseId, clazzid, chapterId, cp
 	method1 := "GET"
 
 	tr1 := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -565,9 +551,7 @@ func (cache *XueXiTUserCache) GetCourseFaceQrPlan1Api(courseId, classId, uuid, o
 	payload := strings.NewReader("clazzId=" + classId + "&courseId=" + courseId + "&uuid=" + uuid + "&qrcEnc=" + qrcEnc + "&objectId=" + objectId + "&failCount=" + failCount + "&compareResult=0")
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -618,9 +602,7 @@ func (cache *XueXiTUserCache) PassFaceQrPlanPhoneNewApi(classId, courseId, knowl
 	urlStr := "https://mooc1-api.chaoxing.com/mooc-ans/facephoto/clientfacecheckstatus?" + "courseId=" + courseId + "&clazzId=" + classId + "&cpi=" + cpi + "&chapterId=" + knowledgeId + "&objectId=" + objectId + "&liveDetectionStatus=1" + "&signt=" + "&signk=" + "&cxtime=" + "&cxcid=" + "&type=1"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -682,9 +664,7 @@ func (cache *XueXiTUserCache) PassFaceQrPlanPhoneNew2Api(classId, courseId, know
 	form.Set("type", "0")
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -741,9 +721,7 @@ func (cache *XueXiTUserCache) PassFaceQrPlanPhoneOldApi(classId, courseId, knowl
 	//payload := strings.NewReader("clazzId=130390181&courseId=256426381&knowledgeId=705058652&uuid=&qrcEnc=&objectId=123")
 	payload := strings.NewReader("clazzId=" + classId + "&courseId=" + courseId + "&knowledgeId=" + knowledgeId + "&uuid=&qrcEnc=&objectId=" + objectId)
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -819,9 +797,7 @@ func (cache *XueXiTUserCache) GetCourseFaceQrPlan5Api(classId, courseId, knowled
 	form.Set("type", "1")
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -874,9 +850,7 @@ func (cache *XueXiTUserCache) GetCourseFaceQrPlan3Api(clazzId, courseId, uuid, q
 	payload := strings.NewReader("clazzId=" + clazzId + "&courseId=" + courseId + "&uuid=" + uuid + "&qrcEnc=" + qrcEnc + "&cpi=" + cpi + "&liveDetectionStatus=0&signt=&signk=&cxtime=&cxcid=&knowledgeid=0" + "&objectId=" + objectId + "&videojobid=&videoCollectTime=0&chaptervideoobjectid=")
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -924,9 +898,7 @@ func (cache *XueXiTUserCache) GetCourseFaceStart(clazzId, courseId, knowledgeId,
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -974,9 +946,7 @@ func (cache *XueXiTUserCache) ContinueStudy(clazzId, courseId, cpi, objectId, er
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -1027,9 +997,7 @@ func (cache *XueXiTUserCache) GetCourseFaceQrPlan4Api(clazzId, courseId, knowled
 	payload := strings.NewReader("clazzId=" + clazzId + "&courseId=" + courseId + "&knowledgeId=" + knowledgeId + "&uuid=" + uuid + "&qrcEnc=" + qrcEnc + "&objectId=" + objectId)
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 	//如果开启了IP代理，那么就直接添加代理
 	if cache.IpProxySW {
@@ -1069,9 +1037,7 @@ func (cache *XueXiTUserCache) GetCourseFaceQrStateApi(uuid, enc, clazzid, course
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理

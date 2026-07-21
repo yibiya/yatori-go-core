@@ -27,9 +27,7 @@ func (cache *XueXiTUserCache) PullBbsCircleIdApi(mid, jobid string, isPortal boo
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -86,9 +84,7 @@ func (cache *XueXiTUserCache) PullUtEnc(courseId, clazzid, chapterId, enc string
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -151,9 +147,7 @@ func (cache *XueXiTUserCache) PullBbsInfoApi(id1, id2, courseId, classId string,
 	urlStr := "https://groupweb.chaoxing.com/course/topic/v3/bbs/" + id1 + "/" + id2 + "/replysList?courseId=" + courseId + "&classId=" + classId
 	method := "GET"
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 	//如果开启了IP代理，那么就直接添加代理
 	if cache.IpProxySW {
@@ -203,9 +197,7 @@ func (cache *XueXiTUserCache) PullPhoneBbsInfoApi(mtopid, jobid, knowledgeid, co
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -277,9 +269,7 @@ func (cache *XueXiTUserCache) PullPhoneBbsDetailApi(topicId string) (string, err
 	payload := strings.NewReader("puid=" + puid + "&maxW=1080&topicId=" + topicId)
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -335,9 +325,7 @@ func (cache *XueXiTUserCache) AnswerBbsApi(topicUUid, courseId, classId, topic_c
 	payload := strings.NewReader("courseId=" + courseId + "&classId=" + classId + "&replyId=-1&uuid=" + newUUID.String() + "&topic_content=" + url.QueryEscape(topic_content) + "&anonymous=&urlToken=" + urlToken + "&bbsid=" + bbsid)
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 	//如果开启了IP代理，那么就直接添加代理
 	if cache.IpProxySW {
@@ -407,9 +395,7 @@ func (cache *XueXiTUserCache) AnswerPhoneBbsApi(classId, topicUUID, content stri
 	payload := strings.NewReader("content=" + url.QueryEscape(content))
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 	//如果开启了IP代理，那么就直接添加代理
 	if cache.IpProxySW {

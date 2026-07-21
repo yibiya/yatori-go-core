@@ -69,9 +69,7 @@ func (cache *XueXiTUserCache) PullWorkListHtmlApi(courseId string, classId strin
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 	client := &http.Client{
 		Transport: tr,
@@ -139,9 +137,7 @@ func (cache *XueXiTUserCache) PullWorkEnterInformHtmlApi(
 	var finalURL string // ⭐ 用于保存最终的有效 URL
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 	client := &http.Client{
 		Transport: tr,
@@ -213,9 +209,7 @@ func (cache *XueXiTUserCache) PullWorkPaperHtmlApi(courseId, classId, workId, so
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -352,9 +346,7 @@ func (cache *XueXiTUserCache) SubmitWorkAnswerApi(question *XXTWorkQuestionSubmi
 	//payload := strings.NewReader("workExamUploadUrl=&workExamUploadCrcUrl=&workRelationAnswerId=54657628&knowledgeid=0&enc=737ad94cd5529ffa3ba68606eb91a124&source=0&encWork=ace56cb8a1c65f68339d3cd452757caa&courseId=258101827&workRelationId=48731428&classId=134204187&workTimesEnc=&courseId=258101827&workRelationId=48731428&classId=134204187&answer405139692=A&type405139692=0&score405139692=100.0&questionId=405139692&index=0&tempSave=false")
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -408,9 +400,7 @@ func (cache *XueXiTUserCache) PullWorkQuestionApi(courseId, classId, workId, sou
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理

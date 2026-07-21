@@ -36,9 +36,7 @@ func (cache *XueXiTUserCache) PageMobileChapterCard(
 	//params.Add("pagestate", "0")
 	//params.Add("isMicroCourse", "false")
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 	client := &http.Client{
 		Transport: tr,
@@ -119,9 +117,7 @@ func (cache *XueXiTUserCache) VideoDtoFetch(p *PointVideoDto, retry int, lastErr
 	params.Set("_dc", strconv.FormatInt(time.Now().UnixNano()/1e6, 10))
 	method := "GET"
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -182,9 +178,7 @@ func (cache *XueXiTUserCache) VideoSubmitStudyTimeApi(p *PointVideoDto, playingT
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -265,9 +259,7 @@ func (cache *XueXiTUserCache) VideoSubmitStudyTimePEApi(p *PointVideoDto, playin
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -347,9 +339,7 @@ func (cache *XueXiTUserCache) VideoDtoPlayReport(p *PointVideoDto, playingTime i
 	enc := hex.EncodeToString(hash[:])
 	//fmt.Println(enc)
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -467,9 +457,7 @@ func (cache *XueXiTUserCache) WorkFetchQuestion(p *PointWorkDto, retry int, last
 	params.Add("ktoken", p.KToken)
 	params.Add("enc", p.Enc)
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -551,9 +539,7 @@ func (cache *XueXiTUserCache) WorkFetch1Question(p *PointWorkDto, retry int, las
 	params.Add("originJobId", p.JobID)
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -619,9 +605,7 @@ func (cache *XueXiTUserCache) WorkFetch2Question(p *PointWorkDto, retry int, las
 	params.Add("originJobId", p.JobID)
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -678,9 +662,7 @@ func (cache *XueXiTUserCache) WorkCommit(p *PointWorkDto, fields []WorkInputFiel
 	payload := strings.NewReader("")
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -734,9 +716,7 @@ func (cache *XueXiTUserCache) DocumentDtoReadingReport(p *PointDocumentDto, retr
 	}
 	method := "GET"
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -798,9 +778,7 @@ func (cache *XueXiTUserCache) DocumentDtoReadingBookReport(p *PointDocumentDto, 
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -864,9 +842,7 @@ func (cache *XueXiTUserCache) ReadV2PointWebReport(p *PointDocumentDto, retry in
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -925,9 +901,7 @@ func (cache *XueXiTUserCache) ReadV2PointPeReport(p *PointDocumentDto, retry int
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
@@ -979,9 +953,7 @@ func (cache *XueXiTUserCache) HyperlinkDtoCompleteReport(p *PointHyperlinkDto, r
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 	//如果开启了IP代理，那么就直接添加代理
 	if cache.IpProxySW {
@@ -1035,9 +1007,7 @@ func (cache *XueXiTUserCache) PullLiveInfoApi(p *PointLiveDto, retry int, lastEr
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 	//如果开启了IP代理，那么就直接添加代理
 	if cache.IpProxySW {
@@ -1092,9 +1062,7 @@ func (cache *XueXiTUserCache) LiveRelationReport(p *PointLiveDto, retry int, las
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 	//如果开启了IP代理，那么就直接添加代理
 	if cache.IpProxySW {
@@ -1147,9 +1115,7 @@ func (cache *XueXiTUserCache) LiveWatchMomentReport(p *PointLiveDto, UParam stri
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 	//如果开启了IP代理，那么就直接添加代理
 	if cache.IpProxySW {
@@ -1201,9 +1167,7 @@ func (cache *XueXiTUserCache) LiveSaveTimePcReport(p *PointLiveDto, retry int, l
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 	//如果开启了IP代理，那么就直接添加代理
 	if cache.IpProxySW {

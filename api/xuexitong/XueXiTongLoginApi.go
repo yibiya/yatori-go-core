@@ -135,9 +135,7 @@ func (cache *XueXiTUserCache) LoginApi(retry int) (string, error) {
 	passwdEncrypted := base64.StdEncoding.EncodeToString(passwdCipherText)
 	//设置代理
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 	//如果开启了IP代理，那么就直接添加代理
 	if cache.IpProxySW {
@@ -215,9 +213,7 @@ func (cache *XueXiTUserCache) MonitorApi() (string, error) {
 	method := "GET"
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // 跳过证书验证，仅用于开发环境
-		},
+		TLSClientConfig: &tls.Config{},
 	}
 
 	//如果开启了IP代理，那么就直接添加代理
