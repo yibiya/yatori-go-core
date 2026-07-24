@@ -1,6 +1,7 @@
 package xuexitong
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -19,6 +20,10 @@ import (
 // cpi ? key ?? ????json?????? int
 // TODO???? int ???????? ?Course???????? ? ?action?????XueXiTCourseDetailForCourseIdAction???? ???
 func (cache *XueXiTUserCache) PullChapter(cpi int, key int, retry int, lastErr error) (string, error) {
+	return cache.PullChapterContext(context.Background(), cpi, key, retry, lastErr)
+}
+
+func (cache *XueXiTUserCache) PullChapterContext(ctx context.Context, cpi int, key int, retry int, lastErr error) (string, error) {
 	if retry < 0 {
 		return "", lastErr
 	}
@@ -40,10 +45,8 @@ func (cache *XueXiTUserCache) PullChapter(cpi int, key int, retry int, lastErr e
 			return url.Parse("http://" + cache.ProxyIP) // 设置代理
 		}
 	}
-	client := &http.Client{
-		Transport: tr,
-	}
-	req, err := http.NewRequest(method, "https://mooc1-api.chaoxing.com/gas/clazz"+"?"+params.Encode(), nil)
+	client := newRequestClient(tr)
+	req, err := http.NewRequestWithContext(ctx, method, "https://mooc1-api.chaoxing.com/gas/clazz"+"?"+params.Encode(), nil)
 
 	if err != nil {
 		fmt.Println(err)
@@ -59,16 +62,19 @@ func (cache *XueXiTUserCache) PullChapter(cpi int, key int, retry int, lastErr e
 	}
 	res, err := client.Do(req)
 	if err != nil {
-		time.Sleep(time.Duration(retry*5) * time.Second)
-		//fmt.Println(err)
-		//return "", err
-		return cache.PullChapter(cpi, key, retry-1, err)
+		if waitErr := waitForRetry(ctx, time.Duration(retry*5)*time.Second); waitErr != nil {
+			return "", waitErr
+		}
+		return cache.PullChapterContext(ctx, cpi, key, retry-1, err)
 	}
 	defer res.Body.Close()
 
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		fmt.Println(err)
+		return "", err
+	}
+	if err := validateResponse("拉取课程章节", res, body); err != nil {
 		return "", err
 	}
 	utils.CookiesAddNoRepetition(&cache.cookies, res.Cookies()) //赋值cookie
@@ -78,6 +84,10 @@ func (cache *XueXiTUserCache) PullChapter(cpi int, key int, retry int, lastErr e
 // FetchChapterPointStatus 章节状态
 // nodes 各章节对应ID
 func (cache *XueXiTUserCache) FetchChapterPointStatus(nodes []int, clazzID, userID, cpi, courseID int, retry int, lastErr error) (string, error) {
+	return cache.FetchChapterPointStatusContext(context.Background(), nodes, clazzID, userID, cpi, courseID, retry, lastErr)
+}
+
+func (cache *XueXiTUserCache) FetchChapterPointStatusContext(ctx context.Context, nodes []int, clazzID, userID, cpi, courseID int, retry int, lastErr error) (string, error) {
 	if retry < 0 {
 		return "", lastErr
 	}
@@ -111,10 +121,8 @@ func (cache *XueXiTUserCache) FetchChapterPointStatus(nodes []int, clazzID, user
 			return url.Parse("http://" + cache.ProxyIP) // 设置代理
 		}
 	}
-	client := &http.Client{
-		Transport: tr,
-	}
-	req, err := http.NewRequest(method, "https://mooc1-api.chaoxing.com/job/myjobsnodesmap", payload)
+	client := newRequestClient(tr)
+	req, err := http.NewRequestWithContext(ctx, method, "https://mooc1-api.chaoxing.com/job/myjobsnodesmap", payload)
 
 	if err != nil {
 		fmt.Println(err)
@@ -131,15 +139,19 @@ func (cache *XueXiTUserCache) FetchChapterPointStatus(nodes []int, clazzID, user
 	}
 	res, err := client.Do(req)
 	if err != nil {
-		//fmt.Println(err)
-		time.Sleep(time.Duration(retry*5) * time.Second)
-		return cache.FetchChapterPointStatus(nodes, clazzID, userID, cpi, courseID, retry-1, err)
+		if waitErr := waitForRetry(ctx, time.Duration(retry*5)*time.Second); waitErr != nil {
+			return "", waitErr
+		}
+		return cache.FetchChapterPointStatusContext(ctx, nodes, clazzID, userID, cpi, courseID, retry-1, err)
 	}
 	defer res.Body.Close()
 
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		fmt.Println(err)
+		return "", err
+	}
+	if err := validateResponse("拉取章节任务点状态", res, body); err != nil {
 		return "", err
 	}
 	// 解码响应体（假设服务器返回的内容是 ISO-8859-1 编码）

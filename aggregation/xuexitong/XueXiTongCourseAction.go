@@ -2,6 +2,7 @@ package xuexitong
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -45,9 +46,13 @@ func (x *XueXiTCourse) ToString() string {
 
 // 拉取学习通所有课程列表并返回
 func XueXiTPullCourseAction(cache *xuexitong.XueXiTUserCache) ([]XueXiTCourse, error) {
-	courses, err := cache.CourseListApi(3, nil)
+	return XueXiTPullCourseActionContext(context.Background(), cache)
+}
+
+func XueXiTPullCourseActionContext(ctx context.Context, cache *xuexitong.XueXiTUserCache) ([]XueXiTCourse, error) {
+	courses, err := cache.CourseListApiContext(ctx, 3, nil)
 	if err != nil {
-		log2.Print(log2.INFO, "["+cache.Name+"] "+" 拉取失败")
+		return nil, fmt.Errorf("[%s] 拉取课程失败: %w", cache.Name, err)
 	}
 
 	//判断是否触发验证码
@@ -75,7 +80,10 @@ func XueXiTPullCourseAction(cache *xuexitong.XueXiTUserCache) ([]XueXiTCourse, e
 				break
 			}
 		}
-		courses, err = cache.CourseListApi(3, nil)
+		courses, err = cache.CourseListApiContext(ctx, 3, nil)
+		if err != nil {
+			return nil, fmt.Errorf("[%s] 验证码通过后拉取课程失败: %w", cache.Name, err)
+		}
 		log2.Print(log2.DEBUG, utils.RunFuncName(), "绕过成功")
 	}
 
@@ -153,7 +161,10 @@ func XueXiTPullCourseAction(cache *xuexitong.XueXiTUserCache) ([]XueXiTCourse, e
 			courseListQueryData += ","
 		}
 	}
-	courseStatusListJson, err := cache.CourseCompleteStatusApi(courseListQueryData, 5, nil)
+	courseStatusListJson, err := cache.CourseCompleteStatusApiContext(ctx, courseListQueryData, 5, nil)
+	if err != nil {
+		return nil, fmt.Errorf("[%s] 拉取课程完成状态失败: %w", cache.Name, err)
+	}
 	courseStatusList := gojsonq.New().JSONString(courseStatusListJson).Find("jobArray")
 	//fmt.Println(courseStatusList)
 	if courseStatusList == nil {
@@ -196,8 +207,12 @@ type KnowledgeItem struct {
 
 // PullCourseChapterAction 获取对应课程的章节信息包括节点信息
 func PullCourseChapterAction(cache *xuexitong.XueXiTUserCache, cpi, key int) (chaptersList ChaptersList, ok bool, err error) {
+	return PullCourseChapterActionContext(context.Background(), cache, cpi, key)
+}
+
+func PullCourseChapterActionContext(ctx context.Context, cache *xuexitong.XueXiTUserCache, cpi, key int) (chaptersList ChaptersList, ok bool, err error) {
 	//拉取对应课程的章节信息
-	chapter, err := cache.PullChapter(cpi, key, 3, nil)
+	chapter, err := cache.PullChapterContext(ctx, cpi, key, 3, nil)
 	if err != nil {
 		return ChaptersList{}, false, errors.New("[" + cache.Name + "] " + " 拉取章节失败" + err.Error())
 	}
@@ -335,9 +350,17 @@ func ChapterFetchPointAction(cache *xuexitong.XueXiTUserCache,
 	chapters *ChaptersList,
 	clazzID, userID, cpi, courseID int,
 ) (ChaptersList, error) {
-	status, err := cache.FetchChapterPointStatus(nodes, clazzID, userID, cpi, courseID, 3, nil)
+	return ChapterFetchPointActionContext(context.Background(), cache, nodes, chapters, clazzID, userID, cpi, courseID)
+}
+
+func ChapterFetchPointActionContext(ctx context.Context, cache *xuexitong.XueXiTUserCache,
+	nodes []int,
+	chapters *ChaptersList,
+	clazzID, userID, cpi, courseID int,
+) (ChaptersList, error) {
+	status, err := cache.FetchChapterPointStatusContext(ctx, nodes, clazzID, userID, cpi, courseID, 3, nil)
 	if err != nil {
-		log2.Print(log2.DEBUG, "["+cache.Name+"] "+" 获取章节状态失败")
+		return ChaptersList{}, fmt.Errorf("[%s] 获取章节状态失败: %w", cache.Name, err)
 	}
 	var cp ChapterPointDTO
 	if err := json.NewDecoder(bytes.NewReader([]byte(status))).Decode(&cp); err != nil {
