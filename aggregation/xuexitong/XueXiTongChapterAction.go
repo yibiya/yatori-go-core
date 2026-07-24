@@ -2,6 +2,7 @@ package xuexitong
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -9,9 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	ddddocr "github.com/Changbaiqi/ddddocr-go/utils"
 	"github.com/thedevsaddam/gojsonq"
-	ort "github.com/yalue/onnxruntime_go"
 
 	"github.com/yatori-dev/yatori-go-core/api/xuexitong"
 	"github.com/yatori-dev/yatori-go-core/models/ctype"
@@ -77,27 +76,8 @@ func ChapterFetchCardsAction(
 			log2.Print(log2.DEBUG, "重新登录后cords值>>", fmt.Sprintf("%+v", cords))
 		} else if err.Error() == "触发验证码" {
 			log2.Print(log2.DEBUG, utils.RunFuncName(), "触发验证码，正在进行AI智能识别绕过.....")
-			for {
-				img, err1 := cache.XueXiTVerificationCodeApi(7, nil)
-				if err1 != nil {
-					return nil, nil, err1
-				}
-
-				_, width, _ := utils.GetImageShape(img)
-
-				var shape ort.Shape
-				if width == 140 {
-					shape = ort.NewShape(1, 23)
-				} else {
-					shape = ort.NewShape(1, 30)
-				}
-				codeResult := ddddocr.SemiOCRVerification(img, shape)
-				status, err1 := cache.XueXiTPassVerificationCode(codeResult, 7, nil)
-				//fmt.Println(codeResult)
-				//fmt.Println(status)
-				if status {
-					break
-				}
+			if err := passImageCaptcha(context.Background(), cache); err != nil {
+				return nil, nil, fmt.Errorf("章节卡片验证码处理失败: %w", err)
 			}
 			cords, err = cache.FetchChapterCords(nodes, index, courseId, 5, nil) //尝试重新拉取卡片信息
 			log2.Print(log2.DEBUG, utils.RunFuncName(), "绕过成功")
@@ -621,24 +601,8 @@ func EnterChapterForwardCallAction(cache *xuexitong.XueXiTUserCache, courseId, c
 			}
 		} else if err.Error() == "触发验证码" {
 			log2.Print(log2.DEBUG, utils.RunFuncName(), "触发验证码，正在进行AI智能识别绕过.....")
-			for {
-				img, err1 := cache.XueXiTVerificationCodeApi(7, nil)
-				if err1 != nil {
-					return err1
-				}
-				_, width, _ := utils.GetImageShape(img)
-
-				var shape ort.Shape
-				if width == 140 {
-					shape = ort.NewShape(1, 23)
-				} else {
-					shape = ort.NewShape(1, 30)
-				}
-				codeResult := ddddocr.SemiOCRVerification(img, shape)
-				status, err1 := cache.XueXiTPassVerificationCode(codeResult, 7, nil)
-				if status {
-					break
-				}
+			if err := passImageCaptcha(context.Background(), cache); err != nil {
+				return fmt.Errorf("进入章节验证码处理失败: %w", err)
 			}
 			err = cache.EnterChapterForwardCallApi(courseId, clazzid, chapterId, cpi, 3, nil) //尝试重新拉取卡片信息
 			log2.Print(log2.DEBUG, utils.RunFuncName(), "绕过成功")

@@ -10,9 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	ddddocr "github.com/Changbaiqi/ddddocr-go/utils"
 	"github.com/thedevsaddam/gojsonq"
-	ort "github.com/yalue/onnxruntime_go"
 	"github.com/yatori-dev/yatori-go-core/api/xuexitong"
 	"github.com/yatori-dev/yatori-go-core/utils"
 	log2 "github.com/yatori-dev/yatori-go-core/utils/log"
@@ -57,27 +55,8 @@ func XueXiTPullCourseActionContext(ctx context.Context, cache *xuexitong.XueXiTU
 	//判断是否触发验证码
 	if strings.Contains(courses, "输入验证码") {
 		log2.Print(log2.DEBUG, utils.RunFuncName(), "触发验证码，正在进行AI智能识别绕过.....")
-		for {
-			img, err1 := cache.XueXiTVerificationCodeApi(7, nil)
-			if err1 != nil {
-				return nil, err1
-			}
-
-			_, width, _ := utils.GetImageShape(img)
-
-			var shape ort.Shape
-			if width == 140 {
-				shape = ort.NewShape(1, 23)
-			} else {
-				shape = ort.NewShape(1, 30)
-			}
-			codeResult := ddddocr.SemiOCRVerification(img, shape)
-			status, err1 := cache.XueXiTPassVerificationCode(codeResult, 7, nil)
-			//fmt.Println(codeResult)
-			//fmt.Println(status)
-			if status {
-				break
-			}
+		if err := passImageCaptcha(ctx, cache); err != nil {
+			return nil, fmt.Errorf("[%s] 课程验证码处理失败: %w", cache.Name, err)
 		}
 		courses, err = cache.CourseListApiContext(ctx, 3, nil)
 		if err != nil {

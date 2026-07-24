@@ -2,6 +2,7 @@ package xuexitong
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -214,16 +215,11 @@ func EnterExamAction(cache *xuexitong.XueXiTUserCache, exam *XXTExam) error {
 			CaptchaId: exam.CaptchaCaptchaId,
 			Referer:   refererUrl,
 		}
-		for {
-			validate, passErr := slider.Pass(cache)
-			if passErr != nil {
-				if strings.Contains(passErr.Error(), `"result":false`) {
-					continue
-				}
-			}
-			exam.Validate = validate
-			break //如果成功了那么直接退出循环
+		validate, passErr := passSliderCaptcha(context.Background(), cache, &slider)
+		if passErr != nil {
+			return fmt.Errorf("考试滑块验证码处理失败: %w", passErr)
 		}
+		exam.Validate = validate
 	}
 	//如果是重考状态那么就先进行重考请求
 	if isReExam {

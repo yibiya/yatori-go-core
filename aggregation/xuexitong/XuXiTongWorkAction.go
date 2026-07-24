@@ -2,6 +2,7 @@ package xuexitong
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -178,16 +179,11 @@ func EnterWorkAction(cache *xuexitong.XueXiTUserCache, exam *XXTWork) error {
 			CaptchaId: exam.CaptchaCaptchaId,
 			Referer:   refererUrl,
 		}
-		for {
-			validate, passErr := slider.Pass(cache)
-			if passErr != nil {
-				if strings.Contains(passErr.Error(), `"result":false`) {
-					continue
-				}
-			}
-			exam.Validate = validate
-			break //如果成功了那么直接退出循环
+		validate, passErr := passSliderCaptcha(context.Background(), cache, &slider)
+		if passErr != nil {
+			return fmt.Errorf("作业滑块验证码处理失败: %w", passErr)
 		}
+		exam.Validate = validate
 	}
 	cpi, answerId, enc := extractParams(enterHtml)
 	exam.Cpi = cpi

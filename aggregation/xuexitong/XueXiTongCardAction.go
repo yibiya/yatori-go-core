@@ -2,6 +2,7 @@ package xuexitong
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,10 +12,8 @@ import (
 	"strings"
 	"time"
 
-	ddddocr "github.com/Changbaiqi/ddddocr-go/utils"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/thedevsaddam/gojsonq"
-	ort "github.com/yalue/onnxruntime_go"
 	"github.com/yatori-dev/yatori-go-core/api/xuexitong"
 	que_core "github.com/yatori-dev/yatori-go-core/que-core/aiq"
 	"github.com/yatori-dev/yatori-go-core/que-core/qtype"
@@ -47,27 +46,8 @@ func PageMobileChapterCardAction(
 	if err != nil {
 		if err.Error() == "触发验证码" {
 			log2.Print(log2.DEBUG, utils.RunFuncName(), "触发验证码，正在进行AI智能识别绕过.....")
-			for {
-				img, err1 := cache.XueXiTVerificationCodeApi(7, nil)
-				if err1 != nil {
-					return nil, "", err1
-				}
-				//codeResult := utils.AutoVerification(img, ort.NewShape(1, 23)) //自动识别
-				_, width, _ := utils.GetImageShape(img)
-
-				var shape ort.Shape
-				if width == 140 {
-					shape = ort.NewShape(1, 23)
-				} else {
-					shape = ort.NewShape(1, 30)
-				}
-				codeResult := ddddocr.SemiOCRVerification(img, shape)
-				status, err1 := cache.XueXiTPassVerificationCode(codeResult, 7, nil)
-				//fmt.Println(codeResult)
-				//fmt.Println(status)
-				if status {
-					break
-				}
+			if err := passImageCaptcha(context.Background(), cache); err != nil {
+				return nil, "", fmt.Errorf("章节卡片验证码处理失败: %w", err)
 			}
 			cardHtml, err = cache.PageMobileChapterCard(classId, courseId, knowledgeId, cardIndex, cpi, 3, nil) //尝试重新拉取卡片信息
 			log2.Print(log2.DEBUG, utils.RunFuncName(), "绕过成功")
