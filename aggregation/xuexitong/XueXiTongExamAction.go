@@ -88,7 +88,7 @@ func PullExamListAction(cache *xuexitong.XueXiTUserCache, course XueXiTCourse) (
 	}
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(examListHtml))
 	if err != nil {
-		log.Fatal(err)
+		return examList, fmt.Errorf("解析考试列表失败: %w", err)
 	}
 
 	// 遍历所有 <li>
@@ -148,16 +148,19 @@ func EnterExamAction(cache *xuexitong.XueXiTUserCache, exam *XXTExam) error {
 	//记得处理上面这个情况
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(enterHtml))
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("解析考试入口失败: %w", err)
 	}
 	isReExam := false
 	//如果可以重考
 	if strings.Contains(enterHtml, `bnt_retake">重考</a>`) {
 		reExamUrl, _ := doc.Find("a.bnt_retake").Attr("data")
 		enterHtml, err = cache.PullReExamPaperHtmlApi(reExamUrl)
+		if err != nil {
+			return fmt.Errorf("拉取重考页面失败: %w", err)
+		}
 		doc, err = goquery.NewDocumentFromReader(strings.NewReader(enterHtml))
 		if err != nil {
-			log.Fatal(err)
+			return fmt.Errorf("解析重考页面失败: %w", err)
 		}
 		isReExam = true
 	}
@@ -321,7 +324,7 @@ func (question *XXTExamQuestion) WriteQuestionForXXTAIAction(cache *xuexitong.Xu
 
 	aiAnswer, err := cache.XueXiTongAIAggregation(classId, courseId, cpi, aiChatMessages)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("学习通 AI 答题失败: %w", err)
 	}
 	var answers []string
 	err = json.Unmarshal([]byte(aiAnswer), &answers)
@@ -355,7 +358,7 @@ func HtmlQuestionTurnEntity(paperHtml string) (XXTExamQuestion, error) {
 	// 使用 goquery 解析 HTML
 	paperDoc, err := goquery.NewDocumentFromReader(bytes.NewReader([]byte(paperHtml)))
 	if err != nil {
-		log.Fatal(err)
+		return question, fmt.Errorf("解析考试题目失败: %w", err)
 	}
 	questionId, exists := paperDoc.Find("#questionId").Attr("value") //题目id
 	if exists {

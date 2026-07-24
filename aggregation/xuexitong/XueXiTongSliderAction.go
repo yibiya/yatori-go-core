@@ -7,6 +7,7 @@ import (
 	"image"
 	"math"
 	"regexp"
+	"strings"
 
 	"github.com/thedevsaddam/gojsonq"
 	xuexitongApi "github.com/yatori-dev/yatori-go-core/api/xuexitong"
@@ -43,7 +44,7 @@ func (slider *XueXiTSlider) Pass(cache *xuexitongApi.XueXiTUserCache) (string, e
 	imgRe := regexp.MustCompile(`cx_captcha_function\((\{.*\})\)`)
 	m := imgRe.FindStringSubmatch(captchaImgResult)
 	if len(m) < 2 {
-		panic("JSON not found")
+		return "", fmt.Errorf("滑块图片响应缺少 JSON: %s", responseSummary(captchaImgResult))
 	}
 
 	jsonStr := m[1]
@@ -60,7 +61,7 @@ func (slider *XueXiTSlider) Pass(cache *xuexitongApi.XueXiTUserCache) (string, e
 	var resp CaptchaResponse
 	err1 := json.Unmarshal([]byte(jsonStr), &resp)
 	if err1 != nil {
-		panic(err)
+		return "", fmt.Errorf("解析滑块图片响应失败: %w", err1)
 	}
 
 	//fmt.Println("Token:", resp.Token)
@@ -95,7 +96,7 @@ func (slider *XueXiTSlider) Pass(cache *xuexitongApi.XueXiTUserCache) (string, e
 	passResultRe := regexp.MustCompile(`cx_captcha_function\((\{.*\})\)`)
 	submatchPass := passResultRe.FindStringSubmatch(passResult)
 	if len(submatchPass) < 2 {
-		panic("JSON not found")
+		return "", fmt.Errorf("滑块验证响应缺少 JSON: %s", responseSummary(passResult))
 	}
 
 	passJsonStr := submatchPass[1]
@@ -104,19 +105,35 @@ func (slider *XueXiTSlider) Pass(cache *xuexitongApi.XueXiTUserCache) (string, e
 			// 第一层：解析整个 JSON
 			extra := gojsonq.New().JSONString(passJsonStr).Find("extraData")
 			if extra == nil {
-				panic("extraData 为空")
+				return "", errors.New("滑块验证响应缺少 extraData")
 			}
 			// extra 是一个 string，需要再解析一遍
-			extraJson := extra.(string)
+			extraJson, ok := extra.(string)
+			if !ok {
+				return "", fmt.Errorf("滑块验证 extraData 类型异常: %T", extra)
+			}
 			// 第二层：从 extraJson 里取 validate
 			validate := gojsonq.New().JSONString(extraJson).Find("validate")
 			if validate == nil {
-				panic("validate 为空")
+				return "", errors.New("滑块验证响应缺少 validate")
 			}
-			return validate.(string), nil
+			validateString, ok := validate.(string)
+			if !ok || validateString == "" {
+				return "", fmt.Errorf("滑块验证 validate 类型异常: %T", validate)
+			}
+			return validateString, nil
 		}
 	}
 	return "", errors.New(passResult)
+}
+
+func responseSummary(value string) string {
+	const limit = 256
+	summary := strings.Join(strings.Fields(value), " ")
+	if len(summary) > limit {
+		return summary[:limit] + "..."
+	}
+	return summary
 }
 
 // 灰度化

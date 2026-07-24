@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"sort"
 	"strconv"
 	"strings"
@@ -217,80 +216,65 @@ func PullCourseChapterActionContext(ctx context.Context, cache *xuexitong.XueXiT
 		return ChaptersList{}, false, errors.New("[" + cache.Name + "] " + " 拉取章节失败" + err.Error())
 	}
 
-	var chapterMap map[string]interface{}
-	err = json.Unmarshal([]byte(chapter), &chapterMap)
-	if err != nil {
-		return ChaptersList{}, false, errors.New(fmt.Sprintf("Error parsing JSON: %s", err))
+	type chapterKnowledge struct {
+		JobCount   int    `json:"jobcount"`
+		IsReview   int    `json:"isreview"`
+		IndexOrder int    `json:"indexorder"`
+		Name       string `json:"name"`
+		ID         int    `json:"id"`
+		Label      string `json:"label"`
+		Layer      int    `json:"layer"`
+		ParentNode int    `json:"parentnodeid"`
+		Status     string `json:"status"`
+		Attachment struct {
+			Data []interface{} `json:"data"`
+		} `json:"attachment"`
 	}
-	chapterMapJson, err := json.Marshal(chapterMap["data"])
-	if len(chapterMapJson) == 2 {
-		return ChaptersList{}, false, errors.New("[" + cache.Name + "] " + "[" + chaptersList.ChatID + "] " + " 课程获取失败" + chapter)
+	var response struct {
+		Data []struct {
+			ChatID  string `json:"chatid"`
+			IsStart bool   `json:"isstart"`
+			BbsID   string `json:"bbsid"`
+			Course  struct {
+				Data []struct {
+					Knowledge struct {
+						Data []chapterKnowledge `json:"data"`
+					} `json:"knowledge"`
+				} `json:"data"`
+			} `json:"course"`
+		} `json:"data"`
 	}
-	// 解析 JSON 数据为 map 切片
-	var chapterData []map[string]interface{}
-	if err := json.Unmarshal(chapterMapJson, &chapterData); err != nil {
-		log.Fatalf("Error parsing JSON: %v", err)
+	if err := json.Unmarshal([]byte(chapter), &response); err != nil {
+		return ChaptersList{}, false, fmt.Errorf("[%s] 解析课程章节失败: %w", cache.Name, err)
 	}
-	var chatid string
-	if v, ok1 := chapterData[0]["chatid"].(string); ok1 {
-		chatid = v
+	if len(response.Data) == 0 {
+		return ChaptersList{}, false, fmt.Errorf("[%s] 课程章节响应缺少 data", cache.Name)
 	}
-	var isstart bool
-	if v, ok2 := chapterData[0]["isstart"].(bool); ok2 {
-		isstart = v
-	}
-	var bbsid string
-	if v, ok3 := chapterData[0]["bbsid"].(string); ok3 {
-		bbsid = v
-	}
-	//else {//chatid并不是非必要项，所以所以注释掉了
-	//	return ChaptersList{}, false, errors.New("[" + cache.Name + "] " + "[" + chaptersList.ChatID + "] " + " 课程获取失败" + chapter)
-	//}
-
-	// 提取 knowledge
-	var knowledgeData []map[string]interface{}
-	course, ok := chapterData[0]["course"].(map[string]interface{})
-	if !ok {
-		return ChaptersList{}, ok, errors.New("[" + cache.Name + "] " + "[" + chaptersList.ChatID + "] " + " 无法提取 course")
-	}
-	data, ok := course["data"].([]interface{})
-	if !ok {
-		return ChaptersList{}, ok, errors.New("[" + cache.Name + "] " + "[" + chaptersList.ChatID + "] " + " 无法提取 course data")
-	}
-	if len(data) > 0 {
-		knowledge, ok := data[0].(map[string]interface{})["knowledge"].(map[string]interface{})["data"].([]interface{})
-		if !ok {
-			return ChaptersList{}, ok, errors.New("[" + cache.Name + "] " + "[" + chaptersList.ChatID + "] " + " 无法提取 knowledge data")
-		}
-		for _, item := range knowledge {
-			knowledgeMap := item.(map[string]interface{})
-			knowledgeData = append(knowledgeData, knowledgeMap)
-		}
-	} else {
-		return ChaptersList{}, false, errors.New("[" + cache.Name + "] " + "[" + chaptersList.ChatID + "] " + " course data 为空")
+	chapterData := response.Data[0]
+	if len(chapterData.Course.Data) == 0 {
+		return ChaptersList{}, false, fmt.Errorf("[%s] 课程章节响应缺少 course.data", cache.Name)
 	}
 
-	// 将提取的数据封装到 CourseInfo 结构体中
-	var knowledgeItems []KnowledgeItem
+	knowledgeData := chapterData.Course.Data[0].Knowledge.Data
+	knowledgeItems := make([]KnowledgeItem, 0, len(knowledgeData))
 	for _, item := range knowledgeData {
-		knowledgeItem := KnowledgeItem{
-			JobCount:     int(item["jobcount"].(float64)),
-			IsReview:     int(item["isreview"].(float64)),
-			Attachment:   item["attachment"].(map[string]interface{})["data"].([]interface{}),
-			IndexOrder:   int(item["indexorder"].(float64)),
-			Name:         item["name"].(string),
-			ID:           int(item["id"].(float64)),
-			Label:        item["label"].(string),
-			Layer:        int(item["layer"].(float64)),
-			ParentNodeID: int(item["parentnodeid"].(float64)),
-			Status:       item["status"].(string),
-		}
-		knowledgeItems = append(knowledgeItems, knowledgeItem)
+		knowledgeItems = append(knowledgeItems, KnowledgeItem{
+			JobCount:     item.JobCount,
+			IsReview:     item.IsReview,
+			Attachment:   item.Attachment.Data,
+			IndexOrder:   item.IndexOrder,
+			Name:         item.Name,
+			ID:           item.ID,
+			Label:        item.Label,
+			Layer:        item.Layer,
+			ParentNodeID: item.ParentNode,
+			Status:       item.Status,
+		})
 	}
 	chaptersList = ChaptersList{
-		ChatID:    chatid,
-		IsStart:   isstart,
-		Bbsid:     bbsid,
+		ChatID:    chapterData.ChatID,
+		IsStart:   chapterData.IsStart,
+		Bbsid:     chapterData.BbsID,
 		Knowledge: knowledgeItems,
 	}
 	if len(chaptersList.Knowledge) == 0 {

@@ -73,9 +73,12 @@ func PageMobileChapterCardAction(
 			log2.Print(log2.DEBUG, utils.RunFuncName(), "绕过成功")
 		}
 	}
+	if err != nil {
+		return nil, "", fmt.Errorf("拉取章节卡片失败: %w", err)
+	}
 
 	if strings.Contains(cardHtml, `<p class="blankTips">章节未开放</p>`) {
-		return nil, "", errors.New("章节未开放")
+		return nil, "", ChapterNotOpened{}
 	}
 	//如果遇到人脸,则进行过人脸
 	if strings.Contains(cardHtml, `title : "人脸识别"`) {
@@ -95,11 +98,17 @@ func PageMobileChapterCardAction(
 		}
 		//过完人脸重新拉取章节信息
 		cardHtml, err = cache.PageMobileChapterCard(classId, courseId, knowledgeId, cardIndex, cpi, 3, nil)
+		if err != nil {
+			return nil, "", fmt.Errorf("人脸识别后拉取章节卡片失败: %w", err)
+		}
 		//如果新版本人脸过不去，则再尝试旧版本人脸
 		if strings.Contains(cardHtml, `title : "人脸识别"`) {
 			ObjectId, err1 = PassFacePhoneOldAction(cache, fmt.Sprintf("%d", courseId), fmt.Sprintf("%d", classId), fmt.Sprintf("%d", cpi), fmt.Sprintf("%d", knowledgeId), "", "", "")
 			time.Sleep(1 * time.Second) //隔一下
 			cardHtml, err = cache.PageMobileChapterCard(classId, courseId, knowledgeId, cardIndex, cpi, 3, nil)
+			if err != nil {
+				return nil, "", fmt.Errorf("旧版人脸识别后拉取章节卡片失败: %w", err)
+			}
 		}
 
 		if strings.Contains(cardHtml, `title : "人脸识别"`) {
@@ -125,61 +134,49 @@ func PageMobileChapterCardAction(
 			}
 		}
 	}
-	var att interface{}
 
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to fetch pageMobileChapterCard: %w", err)
-	}
+	return parseAttachmentSetting(cardHtml)
+}
+
+func parseAttachmentSetting(cardHtml string) (map[string]interface{}, string, error) {
 	doc, err := html.Parse(bytes.NewReader([]byte(cardHtml)))
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to parse HTML: %w", err)
+		return nil, "", fmt.Errorf("解析章节卡片 HTML 失败: %w", err)
 	}
-
-	var scriptContent string
-	var traverse func(*html.Node)
-	traverse = func(n *html.Node) {
-		if n.Type == html.ElementNode && n.Data == "script" {
-			// Check if the script tag has a type attribute and its value is "text/javascript"
-			hasTypeAttr := false
-			for _, attr := range n.Attr {
-				if attr.Key == "type" && strings.TrimSpace(attr.Val) == "text/javascript" {
-					hasTypeAttr = true
-					break
-				}
-			}
-
-			if hasTypeAttr {
-				// Check if the script tag has a child node and it's a text node
-				if n.FirstChild != nil && n.FirstChild.Type == html.TextNode {
-					scriptContent = strings.TrimSpace(n.FirstChild.Data)
-					return // Exit the traversal as we found what we need
-				}
-			}
-		}
-
-		// Continue traversing the children nodes
-		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			traverse(c)
-		}
-	}
-	traverse(doc)
 
 	// Define the regex pattern to match window.AttachmentSetting JSON object
-	re := regexp.MustCompile(`window\.AttachmentSetting\s*=\s*(\{.*?\});`)
-	matches := re.FindStringSubmatch(scriptContent)
+	re := regexp.MustCompile(`(?s)window\.AttachmentSetting\s*=\s*(\{.*?\});`)
+	matches := re.FindStringSubmatch(cardHtml)
 	if len(matches) > 1 {
-		var attachment interface{}
+		var attachment map[string]interface{}
 		if err := json.Unmarshal([]byte(matches[1]), &attachment); err != nil {
-			return nil, "", fmt.Errorf("failed to parse JSON: %w", err)
+			return nil, "", fmt.Errorf("解析 AttachmentSetting 失败: %w", err)
 		}
-		att = attachment
+		if attachment == nil {
+			return nil, "", APIError{Message: "AttachmentSetting 不是对象"}
+		}
+
+		reEnc := regexp.MustCompile(`<input type="hidden" id="from" value="[^_]+_[^_]+_[^_]+_([^"]+)"/>`)
+		matchesEnc := reEnc.FindStringSubmatch(cardHtml)
+		enc := ""
+		if len(matchesEnc) > 1 {
+			enc = matchesEnc[1]
+			attachment["enc"] = enc
+		}
+		return attachment, enc, nil
 	} else {
 		var blankTips string
+		var traverse func(*html.Node)
 		traverse = func(n *html.Node) {
 			if n.Type == html.ElementNode && n.Data == "p" {
 				for _, attr := range n.Attr {
 					if attr.Key == "class" && strings.Contains(attr.Val, "blankTips") {
-						blankTips = strings.TrimSpace(n.FirstChild.Data)
+						for child := n.FirstChild; child != nil; child = child.NextSibling {
+							if child.Type == html.TextNode {
+								blankTips += child.Data
+							}
+						}
+						blankTips = strings.TrimSpace(blankTips)
 						return
 					}
 				}
@@ -190,22 +187,14 @@ func PageMobileChapterCardAction(
 		}
 		traverse(doc)
 
-		if strings.TrimSpace(blankTips) == "章节未开放！" {
-			log.Println("章节未开放")
-			return ChapterNotOpened{}, "", nil
+		if strings.TrimRight(strings.TrimSpace(blankTips), "！!") == "章节未开放" {
+			return nil, "", ChapterNotOpened{}
 		}
-		return APIError{Message: blankTips}, "", nil
+		if blankTips == "" {
+			blankTips = "章节卡片缺少 AttachmentSetting"
+		}
+		return nil, "", APIError{Message: blankTips}
 	}
-	// 截取
-	reEnc := regexp.MustCompile(`<input type="hidden" id="from" value="[^_]+_[^_]+_[^_]+_([^"]+)"/>`)
-	matchesEnc := reEnc.FindStringSubmatch(cardHtml)
-	enc := ""
-	if len(matchesEnc) > 1 {
-		enc = matchesEnc[1]
-		(att.(map[string]interface{}))["enc"] = enc
-	}
-	//log.Println("Attachment拉取成功")
-	return att, enc, nil
 }
 
 func VideoDtoFetchAction(cache *xuexitong.XueXiTUserCache, p *xuexitong.PointVideoDto) (bool, error) {
@@ -386,7 +375,7 @@ func ParseWorkQuestionAction(cache *xuexitong.XueXiTUserCache, workPoint *xuexit
 	// 使用 goquery 解析 HTML
 	doc, err := goquery.NewDocumentFromReader(bytes.NewReader([]byte(question)))
 	if err != nil {
-		log.Fatal(err)
+		return questionEntity, fmt.Errorf("解析作业页面失败: %w", err)
 	}
 
 	//用于拉取并完善workPointDto信息
@@ -416,7 +405,7 @@ func ParseWorkQuestionAction(cache *xuexitong.XueXiTUserCache, workPoint *xuexit
 	for _, qs := range questionSets {
 		qdoc, err := goquery.NewDocumentFromReader(bytes.NewReader([]byte(qs.HTML)))
 		if err != nil {
-			log.Fatal(err)
+			return questionEntity, fmt.Errorf("解析作业题目失败: %w", err)
 		}
 
 		// 提取题目类型和题目文本

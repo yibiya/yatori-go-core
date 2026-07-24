@@ -285,10 +285,18 @@ func (d PointBBsDto) GetType() ctype.CardType { return d.Type }
 func (d PointBBsDto) IsSetted() bool          { return d.IsSet }
 
 // AttachmentsDetection 使用接口对每种DTO进行检测再次赋值, 以对应后续的刷取请求
-func (p *PointVideoDto) AttachmentsDetection(attachment interface{}) (bool, error) {
+func recoverAttachmentDetection(kind string, detected *bool, err *error) {
+	if recovered := recover(); recovered != nil {
+		*detected = false
+		*err = fmt.Errorf("%s Attachment 数据结构异常: %v", kind, recovered)
+	}
+}
+
+func (p *PointVideoDto) AttachmentsDetection(attachment interface{}) (detected bool, err error) {
+	defer recoverAttachmentDetection("视频", &detected, &err)
 	attachmentMap, ok := attachment.(map[string]interface{})
 	if !ok {
-		return false, errors.New("无法将 Attachment 转换为 map[string]interface{}")
+		return false, fmt.Errorf("视频 Attachment 根节点类型异常: %T", attachment)
 	}
 	attachments, ok := attachmentMap["attachments"].([]interface{})
 	if !ok {
@@ -296,7 +304,10 @@ func (p *PointVideoDto) AttachmentsDetection(attachment interface{}) (bool, erro
 	}
 
 	for _, a := range attachments {
-		attachment, _ := a.(map[string]interface{})
+		attachment, ok := a.(map[string]interface{})
+		if !ok {
+			return false, fmt.Errorf("视频 Attachment 子项类型异常: %T", a)
+		}
 		property, ok := attachment["property"].(map[string]interface{})
 		if !ok {
 			return false, errors.New("invalid property structure")
@@ -324,7 +335,11 @@ func (p *PointVideoDto) AttachmentsDetection(attachment interface{}) (bool, erro
 
 			var otherInfo string
 
-			parts := strings.SplitN(attachment["otherInfo"].(string), "&", 2)
+			otherInfoValue, ok := attachment["otherInfo"].(string)
+			if !ok {
+				return false, fmt.Errorf("视频 Attachment otherInfo 类型异常: %T", attachment["otherInfo"])
+			}
+			parts := strings.SplitN(otherInfoValue, "&", 2)
 			if len(parts) > 0 {
 				otherInfo = parts[0]
 			}
@@ -413,25 +428,39 @@ func (p *PointVideoDto) AttachmentsDetection(attachment interface{}) (bool, erro
 		}
 	}
 	if p.Attachment == nil {
-		p.Logger.Println("Failed to locate resource")
+		if p.Logger != nil {
+			p.Logger.Println("Failed to locate resource")
+		}
 		return false, nil
 	}
 	defaults, ok := attachmentMap["defaults"].(map[string]interface{})
 	if !ok {
 		return false, errors.New("invalid defaults structure")
 	}
-	fid, _ := strconv.Atoi(defaults["fid"].(string))
+	fidValue, ok := defaults["fid"].(string)
+	if !ok {
+		return false, fmt.Errorf("视频 Attachment defaults.fid 类型异常: %T", defaults["fid"])
+	}
+	fid, err := strconv.Atoi(fidValue)
+	if err != nil {
+		return false, fmt.Errorf("视频 Attachment defaults.fid 无效: %w", err)
+	}
 	p.FID = fid
-	p.PUID = defaults["userid"].(string)
+	userid, ok := defaults["userid"].(string)
+	if !ok {
+		return false, fmt.Errorf("视频 Attachment defaults.userid 类型异常: %T", defaults["userid"])
+	}
+	p.PUID = userid
 
 	return true, nil
 }
 
-func (p *PointWorkDto) AttachmentsDetection(attachment interface{}) (bool, error) {
+func (p *PointWorkDto) AttachmentsDetection(attachment interface{}) (detected bool, err error) {
+	defer recoverAttachmentDetection("作业", &detected, &err)
 	attachmentMap, ok := attachment.(map[string]interface{})
 	var flag bool
 	if !ok {
-		return false, errors.New("无法将 Attachment 转换为 map[string]interface{}")
+		return false, fmt.Errorf("作业 Attachment 根节点类型异常: %T", attachment)
 	}
 	attachments, ok := attachmentMap["attachments"].([]interface{})
 	if !ok {
@@ -475,10 +504,11 @@ func (p *PointWorkDto) AttachmentsDetection(attachment interface{}) (bool, error
 	return flag, nil
 }
 
-func (p *PointDocumentDto) AttachmentsDetection(attachment interface{}) (bool, error) {
+func (p *PointDocumentDto) AttachmentsDetection(attachment interface{}) (detected bool, err error) {
+	defer recoverAttachmentDetection("文档", &detected, &err)
 	attachmentMap, ok := attachment.(map[string]interface{})
 	if !ok {
-		return false, errors.New("无法将 Attachment 转换为 map[string]interface{}")
+		return false, fmt.Errorf("文档 Attachment 根节点类型异常: %T", attachment)
 	}
 	attachments, ok := attachmentMap["attachments"].([]interface{})
 	if !ok {
@@ -602,10 +632,11 @@ func (p *PointDocumentDto) AttachmentsDetection(attachment interface{}) (bool, e
 	return true, nil
 }
 
-func (p *PointHyperlinkDto) AttachmentsDetection(attachment interface{}) (bool, error) {
+func (p *PointHyperlinkDto) AttachmentsDetection(attachment interface{}) (detected bool, err error) {
+	defer recoverAttachmentDetection("外链", &detected, &err)
 	attachmentMap, ok := attachment.(map[string]interface{})
 	if !ok {
-		return false, errors.New("无法将 Attachment 转换为 map[string]interface{}")
+		return false, fmt.Errorf("外链 Attachment 根节点类型异常: %T", attachment)
 	}
 	attachments, ok := attachmentMap["attachments"].([]interface{})
 	if !ok {
@@ -639,10 +670,11 @@ func (p *PointHyperlinkDto) AttachmentsDetection(attachment interface{}) (bool, 
 }
 
 // 直播卡片
-func (p *PointLiveDto) AttachmentsDetection(attachment interface{}) (bool, error) {
+func (p *PointLiveDto) AttachmentsDetection(attachment interface{}) (detected bool, err error) {
+	defer recoverAttachmentDetection("直播", &detected, &err)
 	attachmentMap, ok := attachment.(map[string]interface{})
 	if !ok {
-		return false, errors.New("无法将 Attachment 转换为 map[string]interface{}")
+		return false, fmt.Errorf("直播 Attachment 根节点类型异常: %T", attachment)
 	}
 	attachments, ok := attachmentMap["attachments"].([]interface{})
 	if !ok {
@@ -699,10 +731,11 @@ func (p *PointLiveDto) AttachmentsDetection(attachment interface{}) (bool, error
 }
 
 // 直播卡片
-func (p *PointBBsDto) AttachmentsDetection(attachment interface{}) (bool, error) {
+func (p *PointBBsDto) AttachmentsDetection(attachment interface{}) (detected bool, err error) {
+	defer recoverAttachmentDetection("讨论", &detected, &err)
 	attachmentMap, ok := attachment.(map[string]interface{})
 	if !ok {
-		return false, errors.New("无法将 Attachment 转换为 map[string]interface{}")
+		return false, fmt.Errorf("讨论 Attachment 根节点类型异常: %T", attachment)
 	}
 	attachments, ok := attachmentMap["attachments"].([]interface{})
 	if !ok {
