@@ -16,6 +16,21 @@ import (
 	log2 "github.com/yatori-dev/yatori-go-core/utils/log"
 )
 
+// ChaptersEmpty 表示课程本身没有任何章节内容。
+//
+// 这不是故障：老师建了课、挂了班级，但没往章节里放东西（实测 2026-11-01，
+// 53 门课里有 24 门如此）。课程列表接口的 jobcount 同时为 0，两个独立接口
+// 互相印证。调用方应当把它当作「正常跳过」，用普通信息级日志呈现，
+// 而不是当成拉取失败报错——否则每轮刷课刷出十几条红字，真故障反而被淹没。
+type ChaptersEmpty struct {
+	Account string
+	ChatID  string
+}
+
+func (e ChaptersEmpty) Error() string {
+	return "[" + e.Account + "] [" + e.ChatID + "] 课程章节为空"
+}
+
 type XueXiTCourse struct {
 	Cpi           int    `json:"cpi"`      // 用户唯一标识
 	Key           string `json:"key"`      // classID 在课程API中为key
@@ -258,8 +273,7 @@ func PullCourseChapterActionContext(ctx context.Context, cache *xuexitong.XueXiT
 	}
 	if len(chaptersList.Knowledge) == 0 {
 		log2.Print(log2.DEBUG, "["+cache.Name+"] "+"["+chaptersList.ChatID+"] "+" 课程章节为空")
-		//return ChaptersList{}, false, err
-		return ChaptersList{}, false, errors.New("[" + cache.Name + "] " + "[" + chaptersList.ChatID + "] " + " 课程章节为空")
+		return ChaptersList{}, false, ChaptersEmpty{Account: cache.Name, ChatID: chaptersList.ChatID}
 	}
 	// 按照任务点节点重排顺序
 	sort.Slice(chaptersList.Knowledge, func(i, j int) bool {
