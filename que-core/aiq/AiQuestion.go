@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/yatori-dev/yatori-go-core/models/ctype"
@@ -31,6 +32,72 @@ type Message struct {
 // AiSem 限制同时并发的 AI 调用数量（容量=2）
 var AiSem = make(chan struct{}, 2)
 
+// AI 调用最小间隔与配置开关。
+//
+// 背景（实测 2026-11-01）：多个账号同时刷课、都开着 AI 答题时，答题请求
+// 会以 0 秒间隔连续打到上游，被 new-api 网关判定为「批量探测模型」并自动
+// 封号：
+//
+//	{"code":"bulk_probe_detected","message":"bulk model probing detected"}
+//	-> {"message":"该用户已被禁用：触发批量模型探测自动封禁"}
+//
+// 日志实测同一秒内出现 2~3 个并发请求。仅靠 AiSem(2) 不够——它只限制
+// 同时在场数量，连续完成时下一次仍会立刻发出。
+//
+// 这里在「拿到信号量之后、真正发请求之前」再插一个最小间隔，把突发
+// 流量摊平。间隔可以通过 SetAICallInterval 调整，0 表示关闭。
+var (
+	aiCallMu       sync.Mutex
+	aiLastCallTime time.Time
+	aiCallInterval = 1500 * time.Millisecond
+)
+
+// SetAICallInterval 设置两次 AI 调用之间的最小间隔，传 0 关闭限速。
+// 返回设置前的值，便于测试或调用方恢复。
+func SetAICallInterval(d time.Duration) time.Duration {
+	aiCallMu.Lock()
+	defer aiCallMu.Unlock()
+	prev := aiCallInterval
+	if d < 0 {
+		d = 0
+	}
+	aiCallInterval = d
+	return prev
+}
+
+// AICallInterval 返回当前的最小调用间隔。
+func AICallInterval() time.Duration {
+	aiCallMu.Lock()
+	defer aiCallMu.Unlock()
+	return aiCallInterval
+}
+
+// waitAISlot 在真正发起请求前等待，使两次调用至少相隔 aiCallInterval。
+//
+// 持锁计算「还要睡多久」后立刻放锁，睡眠期间不占锁，避免串行化整个流程；
+// 同时把「本次预定时间」提前写入 aiLastCallTime，这样并发调用者会各自
+// 排到不同的时间点，而不是同时醒来又一起冲上去。
+func waitAISlot() {
+	aiCallMu.Lock()
+	interval := aiCallInterval
+	now := time.Now()
+	earliest := aiLastCallTime.Add(interval)
+	wait := time.Duration(0)
+	if interval > 0 && now.Before(earliest) {
+		wait = earliest.Sub(now)
+	}
+	// 预定本轮的发送时刻
+	slot := now.Add(wait)
+	if slot.After(aiLastCallTime) {
+		aiLastCallTime = slot
+	}
+	aiCallMu.Unlock()
+
+	if wait > 0 {
+		time.Sleep(wait)
+	}
+}
+
 // AggregationAIApi 聚合所有AI接口，直接通过aiType判断然后返回内容
 func AggregationAIApi(url,
 	model string,
@@ -43,6 +110,9 @@ func AggregationAIApi(url,
 	defer func() {
 		<-AiSem // 释放信号量
 	}()
+
+	// 限速：与上一个请求至少间隔 aiCallInterval，避免被上游判为批量探测
+	waitAISlot()
 
 	switch aiType {
 	case ctype.ChatGLM:
