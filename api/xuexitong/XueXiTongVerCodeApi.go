@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -56,15 +57,19 @@ func (cache *XueXiTUserCache) XueXiTVerificationCodeApi(retry int, lastErr error
 
 	res, err := client.Do(req)
 	if err != nil {
-		return cache.XueXiTChapterVerificationCodeApi(retry-1, err)
+		// 注意：这里原来会回落到 XueXiTChapterVerificationCodeApi，
+		// 那是另一套验证码会话（mooc-ans/kaptcha-img），识别出来的码提交到
+		// processVerify.ac 必然被拒，等于亲手把重试次数烧光。
+		// 同一个端点重试即可。
+		return cache.XueXiTVerificationCodeApi(retry-1, err)
 	}
 	defer res.Body.Close()
 
 	// 直接 decode 图片
 	img, _, err := image.Decode(res.Body)
 	if err != nil {
-		// 可能是坏图，尝试重试
-		return cache.XueXiTChapterVerificationCodeApi(retry-1, err)
+		// 不是图片时（例如返回了 202 的挑战页 HTML），重试同一端点
+		return cache.XueXiTVerificationCodeApi(retry-1, err)
 	}
 
 	return img, nil
@@ -117,7 +122,9 @@ func (cache *XueXiTUserCache) XueXiTChapterVerificationCodeApi(retry int, lastEr
 	// 直接 decode 图片
 	img, _, err := image.Decode(res.Body)
 	if err != nil {
-		// 可能是坏图，尝试重试
+		// 可能是坏图，重试同一个「章节验证码」端点。
+		// 不要回落到 XueXiTVerificationCodeApi：那是另一个会话的验证码，
+		// 提交到 verifyCode/studychapter 会被拒。
 		return cache.XueXiTChapterVerificationCodeApi(retry-1, err)
 	}
 
@@ -182,16 +189,46 @@ func (cache *XueXiTUserCache) XueXiTPassVerificationCode(code string, retry int,
 	}
 	defer res.Body.Close()
 
-	//body, err := ioutil.ReadAll(res.Body)
-	//if err != nil {
-	//	fmt.Println(err)
-	//	return false, err
-	//}
-	//fmt.Println(string(body))
-	if res.StatusCode == 302 {
+	// 学习通这个接口的返回码不是固定的 302：
+	//   成功 -> 200，直接把原本要访问的页面（章节卡片 HTML）返回
+	//   失败 -> 202，返回「请输入图片中的验证码」那个 HTML 挑战页
+	// 历史代码只认 302，导致即使验证码输对了也一律判失败，
+	// 上层 retryCaptcha 重试 5 次后报「验证码被拒绝」（实测 2026-11-01）。
+	body, readErr := ioutil.ReadAll(res.Body)
+	if readErr != nil {
+		body = nil
+	}
+	if interpretCaptchaSubmit(res.StatusCode, body) {
 		return true, nil
 	}
 	return false, nil
+}
+
+// interpretCaptchaSubmit 判定 /html/processVerify.ac 的响应是否代表「验证码已通过」。
+//
+// 实测（2026-11-01）：
+//
+//	通过 -> 200，响应体是原本要访问的页面（章节卡片 HTML）
+//	未过 -> 202，响应体是「请输入图片中的验证码」挑战页
+//
+// 历史上还出现过 302，一并兼容。
+//
+// 关键点：只靠状态码不够 —— 200 也可能把挑战页回给你，所以还要看响应体。
+func interpretCaptchaSubmit(statusCode int, body []byte) bool {
+	switch statusCode {
+	case http.StatusFound, http.StatusOK:
+		return !looksLikeCaptchaChallenge(body)
+	}
+	return false
+}
+
+// looksLikeCaptchaChallenge 判断响应体是不是「还要你再输一次验证码」的挑战页。
+// 成功时这个接口会把目标页面整段返回，里面不会有这些标记。
+func looksLikeCaptchaChallenge(body []byte) bool {
+	s := string(body)
+	return strings.Contains(s, "请输入验证码") ||
+		strings.Contains(s, "请输入图片中的验证码") ||
+		strings.Contains(s, "processVerify.ac")
 }
 
 // 提交学习通验证码(章节内）
@@ -258,11 +295,10 @@ func (cache *XueXiTUserCache) XueXiTPassCahpterVerificationCode(code string, ret
 		fmt.Println(err)
 		return false, err
 	}
-	fmt.Println(string(body))
-	if string(body) != `{"status":true}` {
-		return true, nil
-	}
-	return false, nil
+	// 这里原来写成 `if body != {"status":true} { return true }`，判断完全反了：
+	// 验证码输错（返回 {"status":false}）会被当成成功，输对反而继续重试。
+	// 结果就是永远刷不过，上层重试到上限后报「验证码被拒绝」（2026-11-01 实测）。
+	return strings.TrimSpace(string(body)) == `{"status":true}`, nil
 }
 
 // XueXiTSliderVerificationCodeApi 获取学习通滑块验证码相关信息，返回信息cx_captcha_function({"t":1764584640340,"captchaId":"Ew0z9skxsLzVKQjmeObQiRVLxkxbPkRF"})

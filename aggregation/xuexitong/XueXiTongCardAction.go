@@ -43,15 +43,17 @@ func PageMobileChapterCardAction(
 	cache *xuexitong.XueXiTUserCache,
 	classId, courseId, knowledgeId, cardIndex, cpi int) (interface{}, string, error) {
 	cardHtml, err := cache.PageMobileChapterCard(classId, courseId, knowledgeId, cardIndex, cpi, 3, nil)
-	if err != nil {
-		if err.Error() == "触发验证码" {
-			log2.Print(log2.DEBUG, utils.RunFuncName(), "触发验证码，正在进行AI智能识别绕过.....")
-			if err := passImageCaptcha(context.Background(), cache); err != nil {
-				return nil, "", fmt.Errorf("章节卡片验证码处理失败: %w", err)
-			}
-			cardHtml, err = cache.PageMobileChapterCard(classId, courseId, knowledgeId, cardIndex, cpi, 3, nil) //尝试重新拉取卡片信息
-			log2.Print(log2.DEBUG, utils.RunFuncName(), "绕过成功")
+	// 验证码可能连着出现：过了这一次，紧接着再拉又是「触发验证码」
+	//（实测 2026-11-01 约 1/8 概率）。这里允许连续处理 3 轮，
+	// 每轮 passImageCaptcha 内部已有 5 次尝试。
+	const maxCaptchaRounds = 3
+	for round := 0; err != nil && err.Error() == "触发验证码" && round < maxCaptchaRounds; round++ {
+		log2.Print(log2.DEBUG, utils.RunFuncName(), "触发验证码，正在进行AI智能识别绕过.....")
+		if passErr := passImageCaptcha(context.Background(), cache); passErr != nil {
+			return nil, "", fmt.Errorf("章节卡片验证码处理失败: %w", passErr)
 		}
+		cardHtml, err = cache.PageMobileChapterCard(classId, courseId, knowledgeId, cardIndex, cpi, 3, nil) //尝试重新拉取卡片信息
+		log2.Print(log2.DEBUG, utils.RunFuncName(), "绕过成功")
 	}
 	if err != nil {
 		return nil, "", fmt.Errorf("拉取章节卡片失败: %w", err)

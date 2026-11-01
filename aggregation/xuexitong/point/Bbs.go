@@ -77,21 +77,31 @@ func PullBbsInfoAction(cache *xuexitong.XueXiTUserCache, p *xuexitong.PointBBsDt
 	if err2 != nil {
 		if err2.Error() == "触发验证码" {
 			log2.Print(log2.DEBUG, utils.RunFuncName(), "触发验证码，正在进行AI智能识别绕过.....")
-			for {
-				//codePath, err1 := cache.XueXiTVerificationCodeApi(7, nil)
-				img, err1 := cache.XueXiTChapterVerificationCodeApi(5, nil)
+			// 原来是 for {} 无限重试，且当时 status 判定写反（输错反而 true），
+			// 所以能"退出"。现在判定修好了，必须给出上限，否则错码会死循环。
+			const bbsCaptchaAttempts = 5
+			var lastErr error
+			passed := false
+			for attempt := 0; attempt < bbsCaptchaAttempts; attempt++ {
+				img, err1 := cache.XueXiTChapterVerificationCodeApi(3, nil)
 				if err1 != nil {
-					return nil, err1
+					lastErr = err1
+					continue
 				}
-				//codeResult := utils.AutoVerification(img, ort.NewShape(1, 23)) //自动识别
 				codeResult := ddddocr.SemiOCRVerification(img, ort.NewShape(1, 30))
-				//status, err1 := cache.XueXiTPassVerificationCode(codeResult, 7, nil)
-				status, err1 := cache.XueXiTPassCahpterVerificationCode(codeResult, 5, nil)
-				//fmt.Println(codeResult)
-				//fmt.Println(status)
+				status, err1 := cache.XueXiTPassCahpterVerificationCode(codeResult, 2, nil)
+				if err1 != nil {
+					lastErr = err1
+					continue
+				}
 				if status {
+					passed = true
 					break
 				}
+				lastErr = errors.New("验证码被拒绝")
+			}
+			if !passed {
+				return nil, fmt.Errorf("讨论区图片验证码重试 %d 次后仍未通过: %v", bbsCaptchaAttempts, lastErr)
 			}
 			utEnc, err2 = cache.PullUtEnc(p.CourseID, p.ClassID, fmt.Sprintf("%d", p.KnowledgeID), p.Enc)
 		}
