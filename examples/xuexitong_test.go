@@ -201,7 +201,7 @@ func TestXueXiToChapterCord(t *testing.T) {
 		nodes = append(nodes, item.ID)
 	}
 	courseId, _ := strconv.Atoi(course[index].CourseID)
-	_, fetchCards, err := xuexitong.ChapterFetchCardsAction(&userCache, &action, nodes, 7, courseId, key, course[index].Cpi)
+	_, fetchCards, _, err := xuexitong.ChapterFetchCardsAction(&userCache, &action, nodes, 7, courseId, key, course[index].Cpi)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -287,7 +287,7 @@ func TestXueXiToChapterCardWork(t *testing.T) {
 	}
 	courseId, _ := strconv.Atoi(course[index].CourseID)
 	fmt.Println(course[index].CourseDataID)
-	_, fetchCards, err := xuexitong.ChapterFetchCardsAction(&userCache, &action, nodes, 51, courseId,
+	_, fetchCards, _, err := xuexitong.ChapterFetchCardsAction(&userCache, &action, nodes, 51, courseId,
 		key, course[index].Cpi)
 
 	videoDTOs, workDTOs, documentDTOs, _, _, _ := xuexitongApi.ParsePointDto(fetchCards)
@@ -434,7 +434,7 @@ func TestXueXiToChapterCardDocument(t *testing.T) {
 				time.Sleep(500 * time.Millisecond)
 				continue
 			}
-			_, fetchCards, err := xuexitong.ChapterFetchCardsAction(&userCache, &action, nodes, index, courseId, key, course.Cpi)
+			_, fetchCards, _, err := xuexitong.ChapterFetchCardsAction(&userCache, &action, nodes, index, courseId, key, course.Cpi)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -558,7 +558,7 @@ func TestXueXiToFlushCourse(t *testing.T) {
 			//if pointAction.Knowledge[index].Name != "学术评价" {
 			//	continue
 			//}
-			_, fetchCards, err := xuexitong.ChapterFetchCardsAction(&userCache, &action, nodes, index, courseId, key, course.Cpi)
+			_, fetchCards, _, err := xuexitong.ChapterFetchCardsAction(&userCache, &action, nodes, index, courseId, key, course.Cpi)
 
 			if err != nil {
 				log.Fatal(err)

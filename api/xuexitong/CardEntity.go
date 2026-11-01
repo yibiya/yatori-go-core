@@ -31,6 +31,32 @@ type PointDto struct {
 	PointBBsDto
 }
 
+// PointResourceDto 资料下载 / 知识点球图这类「资源型」条目
+//
+// 它们出现在章节卡片里，但学习通没有 /ananas/job/xxx 提交接口，
+// 进度只能靠「访问」记录：前端点下载时会调
+// /mooc-ans/knowledge/save-attachment-downloader（见 ananas/videojs-ext/recordDownloadInfo.js）。
+//
+// 刻意不实现 IPointDto（GetType/IsSetted），因此不进 All() 迭代、
+// 不被 ParsePointDto 分发 —— 由 ChapterFetchCardsAction 单独收集，
+// 避免改动 ParsePointDto 的返回签名影响所有调用方。
+type PointResourceDto struct {
+	CardIndex   int
+	CourseID    string
+	ClassID     string
+	KnowledgeID int
+	Cpi         string
+
+	ObjectID string
+	Mid      string
+	Title    string
+	FileType string // ".zip" / ".pdf" / ".prt" 等
+	Size     int64
+
+	Type  ctype.CardType
+	IsSet bool
+}
+
 // PointVideoDto 视频任务点
 type PointVideoDto struct {
 	CardIndex   int
@@ -786,4 +812,79 @@ func (p *PointBBsDto) AttachmentsDetection(attachment interface{}) (detected boo
 
 	}
 	return true, nil
+}
+
+// AttachmentsDetection 在卡片 AttachmentSetting 里找到与本条资源对应的附件，
+// 回填 Mid / Title / FileType / Size。
+//
+// downloadfile 在附件里的样子（实测 2026-11-01）：
+//
+//	{"begins":0,"ends":0,"otherInfo":"nodeId_1002521533-cpi_495504274",
+//	 "property":{"size":1968707,"hsize":"1.88 MB","module":"downloadfile",
+//	             "name":"xx-齿轮传动.zip","mid":"5705913726361667309334867",
+//	             "type":".zip","objectid":"fac5fc4c98eabc2c4f586394f1df8c0d"},
+//	 "mid":"5705913726361667309334867","objectid":"fac5fc4c98eabc2c4f586394f1df8c0d"}
+//
+// 没有 jobid / jtoken —— 这正是它「不是常规任务点」的判据。
+func (p *PointResourceDto) AttachmentsDetection(attachment interface{}) (detected bool, err error) {
+	defer recoverAttachmentDetection("资源", &detected, &err)
+	attachmentMap, ok := attachment.(map[string]interface{})
+	if !ok {
+		return false, fmt.Errorf("资源 Attachment 根节点类型异常: %T", attachment)
+	}
+	attachments, ok := attachmentMap["attachments"].([]interface{})
+	if !ok {
+		return false, errors.New("invalid attachment structure")
+	}
+
+	for _, a := range attachments {
+		att, ok := a.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		property, _ := att["property"].(map[string]interface{})
+		if property == nil {
+			continue
+		}
+		if module, _ := property["module"].(string); module != string(p.Type) {
+			continue
+		}
+		mid := firstString(property["mid"], att["mid"])
+		objectID := firstString(property["objectid"], att["objectid"])
+		// 有 objectid 的按 objectid 认，ballchart 之类没有 objectid 的按 mid 认
+		if p.ObjectID != "" && objectID != "" && objectID != p.ObjectID {
+			continue
+		}
+		if p.Mid != "" && mid != "" && mid != p.Mid {
+			continue
+		}
+		if mid != "" {
+			p.Mid = mid
+		}
+		if objectID != "" {
+			p.ObjectID = objectID
+		}
+		if name, ok := property["name"].(string); ok && name != "" {
+			p.Title = name
+		}
+		if t, ok := property["type"].(string); ok && t != "" {
+			p.FileType = t
+		}
+		if size, ok := property["size"].(float64); ok {
+			p.Size = int64(size)
+		}
+		return true, nil
+	}
+	return false, nil
+}
+
+// firstString 取第一个非空字符串值，用于兼容学习通同一字段出现在
+// property 内层或 attachment 外层的两种写法。
+func firstString(vals ...interface{}) string {
+	for _, v := range vals {
+		if s, ok := v.(string); ok && s != "" {
+			return s
+		}
+	}
+	return ""
 }

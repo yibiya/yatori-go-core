@@ -1212,3 +1212,64 @@ func (cache *XueXiTUserCache) LiveSaveTimePcReport(p *PointLiveDto, retry int, l
 	utils.CookiesAddNoRepetition(&cache.cookies, res.Cookies())
 	return string(body), nil
 }
+
+// ResourceDownloaderReport 记录一次「资料下载」型任务点的访问。
+//
+// 学习通没有为 downloadfile 提供 /ananas/job/xxx 提交接口，前端是靠
+// ananas/videojs-ext/recordDownloadInfo.js 在用户点下载时调用
+// /mooc-ans/knowledge/save-attachment-downloader?mid&type&clazzId&courseId&nodeId&cpi
+// 来记账的。参数缺一个就返回 {"result":false,"errorMsg":"参数错误"}，
+// 返回 {"status":true} 表示已记录。
+//
+// 注意：这个接口只记访问，不保证任务点立刻变绿；实测调用后课程
+// job 计数与章节 finishcount 可能不立即变化（服务端另有判定），
+// 所以调用方只当它是「尽力而为」，失败不要中断整章刷取。
+func (cache *XueXiTUserCache) ResourceDownloaderReport(p *PointResourceDto, retry int, lastErr error) (string, error) {
+	if retry < 0 {
+		return "", lastErr
+	}
+	params := url.Values{}
+	params.Set("mid", p.Mid)
+	params.Set("type", p.FileType)
+	params.Set("clazzId", p.ClassID)
+	params.Set("courseId", p.CourseID)
+	params.Set("nodeId", strconv.Itoa(p.KnowledgeID))
+	params.Set("cpi", p.Cpi)
+
+	tr := &http.Transport{TLSClientConfig: &tls.Config{}}
+	if cache.IpProxySW {
+		tr.Proxy = func(req *http.Request) (*url.URL, error) {
+			return url.Parse("http://" + cache.ProxyIP)
+		}
+	}
+	client := &http.Client{Transport: tr}
+
+	req, err := http.NewRequest("GET", "https://mooc1.chaoxing.com/mooc-ans/knowledge/save-attachment-downloader?"+params.Encode(), nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Add("User-Agent", GetUA("mobile"))
+	req.Header.Add("Accept", "*/*")
+	req.Header.Add("X-Requested-With", "XMLHttpRequest")
+	req.Header.Add("Referer", "https://mooc1.chaoxing.com/ananas/modules/downloadfile/index.html")
+	for _, cookie := range cache.cookies {
+		req.AddCookie(cookie)
+	}
+
+	res, err := client.Do(req)
+	if err != nil {
+		time.Sleep(time.Duration(retry*3) * time.Second)
+		return cache.ResourceDownloaderReport(p, retry-1, err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		time.Sleep(time.Duration(retry*3) * time.Second)
+		return cache.ResourceDownloaderReport(p, retry-1, fmt.Errorf("status code: %d", res.StatusCode))
+	}
+	body, err := ioutil.ReadAll(res.Body)
+	utils.CookiesAddNoRepetition(&cache.cookies, res.Cookies())
+	if err != nil {
+		return "", err
+	}
+	return string(body), nil
+}

@@ -52,15 +52,17 @@ type APIResponse struct {
 }
 
 // ChapterFetchCardsAction 解析章节节点
-// return: Card(节点总数结构), []interface{}(解析出可被刷取的节点结构), error
-// 三数据返回
+// return: Card(节点总数结构), 常规任务点, 资源型条目(资料下载/知识点球图), error
 // 节点总数在界面请求中需要他们的index做对应渲染 解析后的需要与后续节点请求刷取中的参数对应
+//
+// 资源型条目单独返回：它们没有 jobid，不走 ParsePointDto 那套常规分发，
+// 由调用方按需执行（见 aggregation/xuexitong/point/Resource.go）。
 
 func ChapterFetchCardsAction(
 	cache *xuexitong.XueXiTUserCache,
 	chapters *ChaptersList,
 	nodes []int,
-	index, courseId, classId, cpi int) ([]Card, []xuexitong.PointDto, error) {
+	index, courseId, classId, cpi int) ([]Card, []xuexitong.PointDto, []xuexitong.PointResourceDto, error) {
 	var apiResp APIResponse
 
 	cords, err := cache.FetchChapterCords(nodes, index, courseId, 5, nil)
@@ -77,7 +79,7 @@ func ChapterFetchCardsAction(
 		} else if err.Error() == "触发验证码" {
 			log2.Print(log2.DEBUG, utils.RunFuncName(), "触发验证码，正在进行AI智能识别绕过.....")
 			if err := passImageCaptcha(context.Background(), cache); err != nil {
-				return nil, nil, fmt.Errorf("章节卡片验证码处理失败: %w", err)
+				return nil, nil, nil, fmt.Errorf("章节卡片验证码处理失败: %w", err)
 			}
 			cords, err = cache.FetchChapterCords(nodes, index, courseId, 5, nil) //尝试重新拉取卡片信息
 			log2.Print(log2.DEBUG, utils.RunFuncName(), "绕过成功")
@@ -94,14 +96,14 @@ func ChapterFetchCardsAction(
 	}
 
 	if err != nil {
-		return []Card{}, nil, err
+		return []Card{}, nil, nil, err
 	}
 	if err := json.NewDecoder(bytes.NewBuffer([]byte(cords))).Decode(&apiResp); err != nil {
-		return []Card{}, nil, err
+		return []Card{}, nil, nil, err
 	}
 	if len(apiResp.Data) == 0 {
 		log2.Print(log2.DEBUG, "获取章节任务节点卡片失败 [", chapters.Knowledge[index].Label, ":", chapters.Knowledge[index].Name, "(Id.", fmt.Sprintf("%d", chapters.Knowledge[index].ID), ")]")
-		return []Card{}, nil, err
+		return []Card{}, nil, nil, err
 	}
 
 	dataItem := apiResp.Data[0]
@@ -111,6 +113,7 @@ func ChapterFetchCardsAction(
 	//	chapters.Knowledge[index].Label, chapters.Knowledge[index].Name, chapters.Knowledge[index].ID)
 
 	pointObjs := make([]xuexitong.PointDto, 0)
+	resourceObjs := make([]xuexitong.PointResourceDto, 0)
 	for cardIndex, card := range cards {
 		if card.Description == "" {
 			log2.Print(log2.DEBUG, "(", fmt.Sprintf("%d", cardIndex), ") 卡片 iframe 不存在 ", fmt.Sprintf("%+v", card))
@@ -133,6 +136,29 @@ func ChapterFetchCardsAction(
 
 			if !point.HasData {
 				log2.Print(log2.DEBUG, "(%d, %d) 任务点 data 为空或不存在 %+v", cardIndex, pointIndex, point)
+				continue
+			}
+
+			// 资料下载 / 知识点球图这类资源模块没有 jobid，学习通也没有
+			// /ananas/job/xxx 提交接口。downloadfile 的进度靠「访问记录」推进
+			//（前端点下载时调 /knowledge/save-attachment-downloader），
+			// ballchart 没有对应接口，只做归类。这里把它们收进 resourceObjs，
+			// 由调用方决定是否执行，避免落进 default 刷「未知的任务点类型」。
+			if resourceType := ctype.CardType(pointType); resourceType.ResourceOnly() {
+				resourceObjs = append(resourceObjs, xuexitong.PointResourceDto{
+					CardIndex:   cardIndex,
+					CourseID:    strconv.Itoa(courseId),
+					ClassID:     strconv.Itoa(classId),
+					KnowledgeID: card.KnowledgeID,
+					Cpi:         strconv.Itoa(cpi),
+					ObjectID:    stringField(point.Data, "objectid"),
+					Mid:         stringField(point.Data, "mid"),
+					Title:       stringField(point.Data, "name"),
+					FileType:    stringField(point.Data, "type"),
+					Size:        intField(point.Data, "size"),
+					Type:        resourceType,
+					IsSet:       true,
+				})
 				continue
 			}
 
@@ -581,7 +607,7 @@ func ChapterFetchCardsAction(
 
 	//log.Printf("章节 可刷取任务节点解析成功 共 %d 个 [%s:%s(Id.%d)]",
 	//	len(pointObjs), chapters.Knowledge[index].Label, chapters.Knowledge[index].Name, chapters.Knowledge[index].ID)
-	return cards, pointObjs, nil
+	return cards, pointObjs, resourceObjs, nil
 }
 
 // 每次进入章节前进行一次调用，防止0任务点无法学习的情况
@@ -668,4 +694,27 @@ func parseIframeData(htmlString string) ([]IframeAttributes, error) {
 
 	traverse(node)
 	return iframes, nil
+}
+
+// stringField 安全取 map 中的字符串字段（学习通同一字段有时是字符串有时是数字）
+func stringField(data map[string]interface{}, key string) string {
+	switch v := data[key].(type) {
+	case string:
+		return v
+	case float64:
+		return strconv.FormatInt(int64(v), 10)
+	}
+	return ""
+}
+
+// intField 安全取 map 中的整数字段
+func intField(data map[string]interface{}, key string) int64 {
+	switch v := data[key].(type) {
+	case float64:
+		return int64(v)
+	case string:
+		n, _ := strconv.ParseInt(v, 10, 64)
+		return n
+	}
+	return 0
 }
